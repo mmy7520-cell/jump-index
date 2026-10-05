@@ -138,7 +138,7 @@ function renderDetail() {
   $("eps").innerHTML = eps.slice(page * C, page * C + C).map(([i, p], j) => {
     const r = read.has(key(cur, i));
     return `<li class="ep${r ? " read" : ""}"><span class="no">No.${page * C + j + 1}</span>
-      <a href="${url(i, p)}" target="_blank" rel="noopener" data-i="${i}"><b>${esc(D.issues[i][1])}</b><span>p.${p} から${mode === "app" ? "（アプリでは号の先頭から開く場合あり）" : ""}</span></a>
+      <a href="${url(i, p)}"${mode === "app" ? "" : ' target="_blank" rel="noopener"'} data-i="${i}"><b>${esc(D.issues[i][1])}</b><span>p.${p} から${mode === "app" ? "（アプリでは号の先頭から開く場合あり）" : ""}</span></a>
       <button class="chk" data-i="${i}" aria-label="読んだ印を切り替え" aria-pressed="${r}"></button></li>`;
   }).join("");
   $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
