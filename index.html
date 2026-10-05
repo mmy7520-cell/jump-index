@@ -56,6 +56,9 @@ h2 { font: 1rem var(--display); margin: 2rem 0 0; color: var(--sub); }
 .ep.read .no, .ep.read a { opacity: .45; }
 .chk { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 2px solid var(--line); background: none; cursor: pointer; padding: 0; }
 .ep.read .chk { background: var(--done); border-color: var(--done); }
+.cont { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .6rem; padding: .9rem 1rem; border-radius: 12px;
+  background: var(--accent); color: #fff; text-decoration: none; font-weight: 700; margin-top: 1rem; }
+.cont span { font-weight: 400; font-size: .85rem; opacity: .9; }
 .pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.2rem; }
 .pager button { flex: 1; padding: .8rem; border-radius: 10px; border: 1px solid var(--line); background: var(--chip); cursor: pointer; font-weight: 700; }
 .pager button:disabled { opacity: .35; cursor: default; }
@@ -70,12 +73,13 @@ h2 { font: 1rem var(--display); margin: 2rem 0 0; color: var(--sub); }
     <ul class="list" id="main"></ul>
     <h2>読切・企画（2回以下の掲載）</h2>
     <ul class="list" id="other"></ul>
-    <p class="note">No. は手元の号での掲載順で、公式の話数と一致しないことがあります。各話をタップすると公式ビューアでその作品の1ページ目が開きます。右の丸は「読んだ」印です（この端末にだけ保存）。</p>
+    <p class="note">No. は手元の号での掲載順で、公式の話数と一致しないことがあります。各話をタップすると公式ビューアでその作品の1ページ目が開きます。読み終わったらSafariの「戻る」でここに戻れます。タップした話は自動で「読んだ」になります。右の丸は「読んだ」印です（この端末にだけ保存）。</p>
   </section>
   <section id="detail" hidden>
     <button class="back" id="back">← 作品一覧</button>
     <h1 id="title"></h1>
     <p class="meta" id="dmeta"></p>
+    <a class="cont" id="cont"></a>
     <nav class="tabs" id="tabs"></nav>
     <ol class="eps" id="eps"></ol>
     <div class="pager"><button id="prev">← 前の10話</button><button id="next">次の10話 →</button></div>
@@ -123,7 +127,7 @@ function open(name, p) {
   $("home").hidden = true; $("detail").hidden = false;
   $("title").textContent = name;
   $("dmeta").textContent = `${eps.length}回掲載・${D.issues[eps[0][0]][1]} 〜 ${D.issues[eps[eps.length - 1][0]][1]}`;
-  renderDetail(); scrollTo(0, 0);
+  store.set("last", name); renderDetail(); scrollTo(0, 0);
 }
 function renderDetail() {
   const eps = all.get(cur), pages = Math.ceil(eps.length / C);
@@ -135,9 +139,13 @@ function renderDetail() {
   $("eps").innerHTML = eps.slice(page * C, page * C + C).map(([i, p], j) => {
     const r = read.has(key(cur, i));
     return `<li class="ep${r ? " read" : ""}"><span class="no">No.${page * C + j + 1}</span>
-      <a href="${url(i, p)}"${mode === "app" ? "" : ' target="_blank" rel="noopener"'} data-i="${i}"><b>${esc(D.issues[i][1])}</b><span>p.${p} から${mode === "app" ? "（アプリでは号の先頭から開く場合あり）" : ""}</span></a>
+      <a href="${url(i, p)}" data-i="${i}"><b>${esc(D.issues[i][1])}</b><span>p.${p} から${mode === "app" ? "（アプリでは号の先頭から開く場合あり）" : ""}</span></a>
       <button class="chk" data-i="${i}" aria-label="読んだ印を切り替え" aria-pressed="${r}"></button></li>`;
   }).join("");
+  const nu = eps.findIndex(([i]) => !read.has(key(cur, i)));
+  $("cont").hidden = nu < 0;
+  if (nu >= 0) { $("cont").href = url(eps[nu][0], eps[nu][1]); $("cont").dataset.i = eps[nu][0];
+    $("cont").innerHTML = `▶ 続きを読む <b>No.${nu + 1}</b><span>${esc(D.issues[eps[nu][0]][1])}</span>`; }
   $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
 }
 function toggle(i, on) {
@@ -150,10 +158,12 @@ document.addEventListener("click", e => {
   const row = e.target.closest(".row"); if (row) return open(row.dataset.name);
   const tab = e.target.closest(".tab"); if (tab) { page = +tab.dataset.p; return renderDetail(); }
   const chk = e.target.closest(".chk"); if (chk) return toggle(+chk.dataset.i);
-  const a = e.target.closest(".ep a"); if (a) setTimeout(() => toggle(+a.dataset.i, true), 300);
+  const a = e.target.closest(".ep a, #cont"); if (a) { read.add(key(cur, +a.dataset.i)); store.set("read", [...read]); }
 });
-$("back").onclick = () => { $("detail").hidden = true; $("home").hidden = false; renderHome(); };
+$("back").onclick = () => { store.set("last", null); $("detail").hidden = true; $("home").hidden = false; renderHome(); };
 $("prev").onclick = () => { page--; renderDetail(); scrollTo(0, 0); };
 $("next").onclick = () => { page++; renderDetail(); scrollTo(0, 0); };
 renderHome();
+var last = store.get("last", null); if (last && all.has(last)) open(last);
+window.addEventListener("pageshow", e => { if (e.persisted && cur) { read = new Set(store.get("read", [])); renderDetail(); } });
 </script>
