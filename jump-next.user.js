@@ -5,6 +5,8 @@
 // @match        https://shonenjumpplus.com/magazine/*
 // @run-at       document-start
 // @grant        none
+// @updateURL    https://mmy7520-cell.github.io/jump-index/jump-next.user.js
+// @downloadURL  https://mmy7520-cell.github.io/jump-index/jump-next.user.js
 // ==/UserScript==
 (function () {
   const INDEX = "https://mmy7520-cell.github.io/jump-index/";
