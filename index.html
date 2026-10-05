@@ -164,6 +164,13 @@ $("back").onclick = () => { store.set("last", null); $("detail").hidden = true; 
 $("prev").onclick = () => { page--; renderDetail(); scrollTo(0, 0); };
 $("next").onclick = () => { page++; renderDetail(); scrollTo(0, 0); };
 renderHome();
+// ビューアの「もくじ」ボタンから戻ったとき: #read=作品番号:話番号,話番号;...
+var allList = D.main.concat(D.other), rm = location.hash.match(/^#read=(.*)$/);
+if (rm) {
+  rm[1].split(";").forEach(function (part) { var kv = part.split(":"), s = allList[+kv[0]];
+    if (s && kv[1]) kv[1].split(",").forEach(function (e) { var ep = s[1][+e]; if (ep) read.add(key(s[0], ep[0])); }); });
+  store.set("read", [...read]); history.replaceState(null, "", location.pathname);
+}
 var last = store.get("last", null); if (last && all.has(last)) open(last);
 window.addEventListener("pageshow", e => { if (e.persisted && cur) { read = new Set(store.get("read", [])); renderDetail(); } });
 </script>
