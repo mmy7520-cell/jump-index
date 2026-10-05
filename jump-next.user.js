@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ジャンプ＋ 次の話ボタン
 // @description  雑誌ビューアに「前の話／もくじ／次の話」バーを出し、同じ作品の次の号の1ページ目へ移動する
-// @version      1.0
+// @version      1.2
 // @match        https://shonenjumpplus.com/magazine/*
 // @run-at       document-start
 // @grant        none
@@ -12,10 +12,12 @@
   const issueId = (location.pathname.match(/\/magazine\/(\d+)/) || [])[1];
   if (!issueId) return;
   // ビューアがハッシュを消す前に開始ページを控える
+  // (スクリプトの実行が遅れてハッシュが消えていても、バーから来た場合は保存済みの番号を使う)
   const m = location.hash.match(/mainPage-(\d+)/);
   const sk = "jn-start-" + issueId;
-  if (m) sessionStorage.setItem(sk, m[1]);
-  const startPage = +(m ? m[1] : sessionStorage.getItem(sk) || 0);
+  let saved = null; try { saved = localStorage.getItem(sk); } catch (e) {}
+  if (m) try { localStorage.setItem(sk, m[1]); } catch (e) {}
+  const startPage = +(m ? m[1] : saved || 0);
 
   const norm = t => { t = t.trim(); for (;;) { const n = t.replace(/\s*[（(【][^（()）【】]*[)）】]\s*$/, ""); if (n === t) return t; t = n; } };
   const ls = { get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } },
@@ -50,15 +52,21 @@
       #jn-bar a,#jn-bar button{color:#fff;text-decoration:none;padding:9px 12px;border-radius:999px;border:0;background:none;font:inherit;white-space:nowrap}
       #jn-bar a.next{background:#d8430f}#jn-bar .off{opacity:.35;pointer-events:none}
       #jn-bar.min a{display:none}</style>
-      <a class="${e > 0 ? "" : "off"}" href="${e > 0 ? href(e - 1) : "#"}">◀ 前</a>
+      <a class="next ${e + 1 < eps.length ? "" : "off"}" href="${e + 1 < eps.length ? href(e + 1) : "#"}">◀ 次の話 No.${e + 2}</a>
       <a class="toc" href="#">もくじ</a>
-      <a class="next ${e + 1 < eps.length ? "" : "off"}" href="${e + 1 < eps.length ? href(e + 1) : "#"}">次の話 No.${e + 2} ▶</a>
+      <a class="${e > 0 ? "" : "off"}" href="${e > 0 ? href(e - 1) : "#"}">前 ▶</a>
       <button class="min" aria-label="バーをたたむ">×</button>`;
     document.body.appendChild(bar);
     bar.querySelector(".toc").onclick = ev => { ev.preventDefault(); location.href = tocHref(); };
     bar.querySelector(".min").onclick = () => { bar.classList.toggle("min"); };
     // 別号へ移動するのでページを読み直させる
-    bar.querySelectorAll("a[href^='https']").forEach(a => a.onclick = ev => { ev.preventDefault(); location.href = a.href; });
+    bar.querySelectorAll("a[href^='https']").forEach(a => a.onclick = ev => {
+      ev.preventDefault();
+      const t = a.href.match(/magazine\/(\d+)#mainPage-(\d+)/);
+      if (t) try { localStorage.setItem("jn-start-" + t[1], t[2]); } catch (e) {}
+      location.href = a.href;
+    });
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", main); else main();
+  let ran = false; const run = () => { if (!ran) { ran = true; main().catch(() => {}); } };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
 })();
